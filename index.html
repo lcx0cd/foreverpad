@@ -1,0 +1,923 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WoWPad — 魔兽手柄映射助手</title>
+<!--
+  WoWPad — 魔兽手柄映射助手 (MIT License)
+  单文件网页工具：用 Chrome/Edge 的 Gamepad API 读取任意 DInput 手柄，
+  引导你逐个按物理按键，生成 WoW(SDL2) 能用的 gamecontrollerdb.txt 映射行。
+  原理与验证见 https://github.com/ 项目 README。
+  注意：网页只能读手柄、生成文本；写文件需要你手动复制或浏览器另存。
+-->
+<style>
+:root { --bg:#0f1115; --card:#171a21; --line:#2a2f3a; --txt:#e8eaf0; --dim:#8b93a7;
+        --acc:#4fd1c5; --warn:#f6ad55; --bad:#fc8181; --ok:#68d391; }
+* { box-sizing: border-box; }
+body { margin:0; background:var(--bg); color:var(--txt);
+       font: 15px/1.55 -apple-system, "PingFang SC", "Hiragino Sans GB", sans-serif; }
+.wrap { max-width: 1060px; margin: 0 auto; padding: 28px 20px 60px; }
+h1 { font-size: 22px; margin: 0 0 6px; letter-spacing:.5px; }
+h1 span { color: var(--acc); }
+.sub { color: var(--dim); font-size: 13px; margin-bottom: 18px; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+        padding: 16px 18px; margin-bottom: 16px; }
+.card h2 { font-size: 15px; margin: 0 0 12px; color: var(--acc); font-weight: 600; }
+.row { display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
+.grid2 { display:grid; grid-template-columns: 1fr 1fr; gap: 10px 24px; }
+@media (max-width: 760px){ .grid2 { grid-template-columns: 1fr; } }
+.kv { display:flex; gap:8px; font-size:13px; min-height:22px; }
+.kv .k { color: var(--dim); min-width: 92px; }
+.kv .v { color: var(--txt); word-break: break-all; }
+select, button, input { font: inherit; }
+select { background:#0c0e12; color:var(--txt); border:1px solid var(--line);
+         border-radius:8px; padding:7px 10px; min-width: 280px; }
+button { background:#20252f; color:var(--txt); border:1px solid var(--line);
+         border-radius:8px; padding:8px 14px; cursor:pointer; }
+button:hover { border-color: var(--acc); }
+button.primary { background: var(--acc); color:#06231f; border-color: var(--acc); font-weight:600; }
+button.primary:hover { filter: brightness(1.08); }
+button:disabled { opacity:.45; cursor:not-allowed; }
+.pill { display:inline-block; padding:2px 9px; border-radius:999px; font-size:12px;
+        border:1px solid var(--line); color:var(--dim); }
+.pill.ok { color:#06231f; background:var(--ok); border-color:var(--ok); }
+.pill.warn { color:#2b1a05; background:var(--warn); border-color:var(--warn); }
+.pill.bad { color:#2b0505; background:var(--bad); border-color:var(--bad); }
+.steps { display:grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap:6px; }
+.step { border:1px solid var(--line); border-radius:8px; padding:6px 9px; font-size:13px;
+        display:flex; justify-content:space-between; gap:8px; color:var(--dim); }
+.step.done { border-color:#2f6f4f; color:var(--ok); }
+.step.cur { border-color: var(--acc); color: var(--txt); box-shadow: 0 0 0 1px var(--acc) inset; }
+.step .val { color: var(--acc); font-family: ui-monospace, Menlo, monospace; }
+.prompt { font-size: 20px; font-weight: 600; margin: 6px 0 12px; min-height: 28px; }
+.prompt .big { color: var(--acc); font-size: 26px; }
+.buttons { display:flex; flex-wrap:wrap; gap:6px; margin:10px 0 4px; }
+.btnchip { min-width: 40px; text-align:center; padding:5px 8px; border-radius:7px;
+           border:1px solid var(--line); font-family: ui-monospace, Menlo, monospace;
+           font-size:12px; color:var(--dim); }
+.btnchip.on { background: var(--acc); color:#06231f; border-color: var(--acc); font-weight:700; }
+.axes { display:grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap:6px 18px; margin-top:10px; }
+.axis { display:flex; align-items:center; gap:8px; font-size:12px; color:var(--dim); }
+.axis b { font-family: ui-monospace, Menlo, monospace; color:var(--txt); width:34px; }
+.bar { position:relative; flex:1; height:8px; background:#0a0c10; border-radius:4px; overflow:hidden; }
+.bar i { position:absolute; top:0; bottom:0; left:50%; background:var(--acc); width:0; }
+textarea { width:100%; min-height:86px; background:#0a0c10; color:#c8f7ef; border:1px solid var(--line);
+           border-radius:8px; padding:10px; font: 12.5px/1.5 ui-monospace, Menlo, monospace; resize:vertical; }
+.hint { color: var(--dim); font-size:12.5px; }
+.warnbox { border-left:3px solid var(--warn); padding:6px 12px; color:#f6d9a8; background:#1c1812;
+           border-radius:6px; font-size:13px; margin-top:10px; }
+code { background:#0a0c10; padding:1px 6px; border-radius:5px; font-family: ui-monospace, Menlo, monospace; }
+/* 手柄示意图 */
+.padwrap { display:flex; gap:18px; flex-wrap:wrap; align-items:center; margin-top:14px; }
+.svgpad { width: 440px; max-width: 100%; }
+.svgpad .part { fill:#20252f; stroke:#3a4150; stroke-width:2; transition:fill .05s; }
+.svgpad .lbl { fill:#8b93a7; font: 12px -apple-system, "PingFang SC", sans-serif; text-anchor:middle; pointer-events:none; }
+.svgpad .on { fill: var(--acc); stroke:#9ff; }
+.svgpad .onlbl { fill:#06231f; font-weight:700; }
+.svgpad .stick { fill:#2a303b; stroke:#3a4150; stroke-width:2; }
+.svgpad .stickdot { fill:#4fd1c5; opacity:.9; }
+.svgpad .body { fill:#141821; stroke:#333a48; stroke-width:2; }
+/* 学习目标按键闪烁 */
+.svgpad .target { stroke: var(--acc) !important; stroke-width: 3.5; animation: pulse 1s ease-in-out infinite; }
+.svgpad .targetlbl { fill: var(--acc) !important; font-weight: 700; }
+.svgpad .stickdot.target { animation: pulse 1s ease-in-out infinite; filter: drop-shadow(0 0 9px var(--acc)); fill:#bffcf4; }
+.svgpad .arrow { fill: var(--acc); font: 700 32px -apple-system, "PingFang SC", sans-serif; text-anchor: middle; opacity: 0; paint-order: stroke; stroke: #0f1115; stroke-width: 6; stroke-linejoin: round; }
+.svgpad .arrow.show { opacity: 1; animation: pulse 1s ease-in-out infinite; filter: drop-shadow(0 0 7px var(--acc)); }
+.svgpad.skin-xbox #vA:not(.on){fill:#4c9a4c}
+.svgpad.skin-xbox #vB:not(.on){fill:#b94a4a}
+.svgpad.skin-xbox #vX:not(.on){fill:#4a7dbd}
+.svgpad.skin-xbox #vY:not(.on){fill:#c9a227}
+.svgpad.skin-ps #vA:not(.on),.svgpad.skin-ps #vB:not(.on),.svgpad.skin-ps #vX:not(.on),.svgpad.skin-ps #vY:not(.on){fill:#3b3f47}
+.svgpad.skin-switch #vA:not(.on){fill:#b94a4a}
+.svgpad.skin-switch #vB:not(.on){fill:#4c9a4c}
+.svgpad.skin-switch #vX:not(.on){fill:#4a7dbd}
+.svgpad.skin-switch #vY:not(.on){fill:#c9a227}
+@keyframes pulse { 0%,100% { filter:none } 50% { filter: drop-shadow(0 0 7px var(--acc)) } }
+
+#photoPreview img { max-width:160px; border-radius:8px; border:1px solid var(--line); }
+@media (max-width: 640px){
+  .wrap { padding: 16px 10px 40px; }
+  .svgpad { width: 100%; }
+  .step { font-size: 12px; padding: 5px 7px; }
+  .prompt .big { font-size: 20px; }
+}
+.toast { position: fixed; left:50%; bottom:26px; transform:translateX(-50%) translateY(20px);
+         background:#06231f; color:#7ef0e0; border:1px solid var(--acc); padding:9px 16px;
+         border-radius:10px; opacity:0; transition:.2s; pointer-events:none; font-size:13px; }
+.toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>WoW<span>Pad</span> — 魔兽手柄映射助手</h1>
+  <div class="sub">网页直接读手柄 → 学按键 → 生成 WoW 映射文件。纯本地，不联网。</div>
+
+  <div class="card">
+    <h2>1. 输入与学习（先按几下键让浏览器标记连接）</h2>
+    <div class="row" style="margin:6px 0 12px">
+      <button class="primary" id="startBtn" style="font-size:17px;padding:10px 24px">开始学习</button>
+      <button id="resetBtn">重来</button>
+      <span class="hint" id="progress">0 / 16</span>
+    </div>
+    <div class="hint" style="margin-bottom:12px">点「开始学习」后，图上对应的键会闪烁，照着按即可。</div>
+    <details id="rawBox" style="margin:4px 0 12px">
+      <summary class="hint" style="cursor:pointer">原始输入（B0–B14 / A0–A9，调试用；平时不用看）</summary>
+      <div class="buttons" id="btnGrid"></div>
+      <div class="axes" id="axisGrid"></div>
+    </details>
+    <div class="padwrap">
+      <svg id="padSvg" class="svgpad" viewBox="0 0 520 300" aria-label="手柄示意图">
+        <path class="body" d="M62 92 Q62 56 104 49 Q160 41 200 58 Q258 30 320 58 Q360 41 416 49 Q458 56 458 92 L458 172 Q458 240 398 250 Q342 258 302 218 Q260 192 218 218 Q178 258 122 250 Q62 240 62 172 Z"/>
+        <rect id="vLT" class="part" x="72" y="30" width="72" height="18" rx="7"/>
+        <text id="tLT" class="lbl" x="108" y="43">LT</text>
+        <rect id="vRT" class="part" x="376" y="30" width="72" height="18" rx="7"/>
+        <text id="tRT" class="lbl" x="412" y="43">RT</text>
+        <rect id="vLB" class="part" x="72" y="54" width="72" height="20" rx="8"/>
+        <text id="tLB" class="lbl" x="108" y="68">LB</text>
+        <rect id="vRB" class="part" x="376" y="54" width="72" height="20" rx="8"/>
+        <text id="tRB" class="lbl" x="412" y="68">RB</text>
+        <circle id="vStickL" class="stick" cx="152" cy="146" r="40"/>
+        <circle id="vDotL" class="stickdot" cx="152" cy="146" r="15"/>
+        <circle id="vStickR" class="stick" cx="330" cy="214" r="40"/>
+        <circle id="vDotR" class="stickdot" cx="330" cy="214" r="15"/>
+        <g id="vDpad">
+          <rect class="part" x="136" y="196" width="32" height="76" rx="8"/>
+          <rect class="part" x="112" y="218" width="80" height="32" rx="8"/>
+        </g>
+        <circle id="vY" class="part" cx="368" cy="104" r="18"/>
+        <text id="tY" class="lbl" x="368" y="109">Y</text>
+        <circle id="vX" class="part" cx="336" cy="136" r="18"/>
+        <text id="tX" class="lbl" x="336" y="141">X</text>
+        <circle id="vB" class="part" cx="400" cy="136" r="18"/>
+        <text id="tB" class="lbl" x="400" y="141">B</text>
+        <circle id="vA" class="part" cx="368" cy="168" r="18"/>
+        <text id="tA" class="lbl" x="368" y="173">A</text>
+        <rect id="vBack" class="part" x="226" y="132" width="26" height="12" rx="6"/>
+        <rect id="vStart" class="part" x="268" y="132" width="26" height="12" rx="6"/>
+        <circle id="vGuide" class="part" cx="260" cy="160" r="11"/>
+        <text id="arrL" class="arrow" x="216" y="157">→</text>
+        <text id="arrLu" class="arrow" x="152" y="92">↑</text>
+        <text id="arrR" class="arrow" x="394" y="225">→</text>
+        <text id="arrRu" class="arrow" x="330" y="172">↑</text>
+      </svg>
+      <div class="hint" style="max-width:260px">
+        示意图会在学完按键后按你的映射高亮；摇杆点位置跟随实时输入。
+        没高亮说明还没学习这个键（或该键不在标准映射里）。
+      </div>
+    </div>
+    <div class="hint" id="eventLog" style="margin-top:10px;font-family:ui-monospace,Menlo,monospace;color:#6f7a90"></div>
+    <hr style="border:0;border-top:1px solid var(--line);margin:16px 0">
+    <h2>按顺序学按键（每步停 1 秒）</h2>
+    <div class="prompt" id="prompt">点「开始学习」，然后按提示逐个按手柄。</div>
+    <div class="steps" id="stepGrid"></div>
+    <div class="hint" style="margin-top:10px">说明：按物理位置认键；摇杆向右/上推到底；扳机按到底。</div>
+  </div>
+
+  <div class="card">
+    <h2>2. 生成映射</h2>
+    <div class="row" style="margin-bottom:10px">
+      <label class="hint">Vendor <input id="vid" size="6" value="" style="width:64px;background:#0a0c10;color:#c8f7ef;border:1px solid var(--line);border-radius:6px;padding:4px 6px"></label>
+      <label class="hint">Product <input id="pid" size="6" value="" style="width:64px;background:#0a0c10;color:#c8f7ef;border:1px solid var(--line);border-radius:6px;padding:4px 6px"></label>
+      <label class="hint"><input type="checkbox" id="hasHat" checked> 十字键是 hat0（大多数 DInput 手柄）</label>
+      <button id="genBtn">生成 / 刷新</button>
+      <button id="swapAB">A/B 对调</button>
+    </div>
+    <div class="row" style="margin-bottom:10px">
+      <button id="lookupBtn">查社区映射库（SDL_GameControllerDB）</button>
+      <span class="hint" id="lookupState">按 VID/PID 匹配已有映射；世界上的手柄是有限的，大部分都有人配过。</span>
+    </div>
+    <div id="communityBox" class="hint" style="display:none;margin-bottom:10px"></div>
+    <textarea id="mapping" spellcheck="false" placeholder="完成学习后这里会生成 SDL mapping 行"></textarea>
+    <div class="row" style="margin-top:10px">
+      <button id="copyBtn">复制映射</button>
+      <button id="dlBtn">下载 .txt</button>
+      <button id="writeBtn">直接写入 WoW 文件…</button>
+      <button id="diagBtn">复制 AI 诊断包</button>
+      <span class="hint" id="fsState"></span>
+    </div>
+    <div id="dropZone" class="hint" style="margin-top:12px;border:2px dashed var(--line);border-radius:10px;padding:16px;text-align:center;cursor:pointer">把 gamecontrollerdb.txt（或整个 WTF 文件夹）拖到这里，或点此选择文件 —— 直接写入，不用知道路径；会自动下载备份。</div>
+    <div id="newSpecies" class="hint" style="display:none;margin-top:12px;border-left:3px solid var(--acc);padding:8px 12px;background:#0d1a18;border-radius:6px"></div>
+    <div class="hint" style="margin-top:12px">路径不知道？点「直接写入」或把 gamecontrollerdb.txt 拖进虚线框（自动备份）。写完完全重启 WoW，游戏内输入 /console GamePadEnable 1，到「按键设置 → Gamepad」绑定。</div>
+  </div>
+
+  <div class="card">
+    <h2>3. 为什么需要这一层？</h2>
+    <div class="hint">macOS 的「游戏控制器」只认 Xbox/PS/Switch/MFi；杂牌 DInput 只能当普通 HID。Chrome 能直接读原始输入，WoW 内置 SDL2，给一条映射即可。本工具把「读手柄 → 学按键 → 生成映射」做成网页。<br><br>AI 排查：复制「AI 诊断包」发给 AI，即可根据设备与学习结果判断问题。</div>
+  </div>
+
+  <div class="card">
+    <h2>4. 手柄信息（调试/排查用）</h2>
+    <div class="row">
+      <select id="padSelect"><option>（未检测到手柄，先按几下键/摇杆）</option></select>
+      <span id="padState" class="pill">未连接</span>
+    </div>
+    <div class="grid2" style="margin-top:12px">
+      <div class="kv"><span class="k">设备名</span><span class="v" id="iName">—</span></div>
+      <div class="kv"><span class="k">GUID 来源</span><span class="v" id="iIds">—</span></div>
+      <div class="kv"><span class="k">按钮数</span><span class="v" id="iButtons">—</span></div>
+      <div class="kv"><span class="k">轴数</span><span class="v" id="iAxes">—</span></div>
+      <div class="kv"><span class="k">mapping</span><span class="v" id="iMapping">—</span></div>
+      <div class="kv"><span class="k">识别方式</span><span class="v" id="iHow">Chrome Gamepad API</span></div>
+    </div>
+    <div class="warnbox" id="macWarn" style="display:none">
+      macOS 系统面板不认杂牌 DInput 手柄，但 Chrome 能读、WoW 走内置 SDL，只要映射文件。
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>设置（一般不用改）</h2>
+    <div class="row">
+      <label class="hint"><input type="checkbox" id="voiceOn" checked> 语音提示</label>
+      <label class="hint">语言 <select id="langSel" style="min-width:auto">
+        <option value="auto">跟随浏览器</option>
+        <option value="zh">中文</option>
+        <option value="en">English</option>
+      </select></label>
+      <label class="hint">手柄外观 <select id="skinSel" style="min-width:auto">
+        <option value="xbox">Xbox</option>
+        <option value="ps">PlayStation</option>
+        <option value="switch">Switch</option>
+      </select></label>
+    </div>
+    <div class="hint">语言默认跟随浏览器；外观仅影响示意图。</div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+// ---------- 状态 ----------
+const STEPS = [
+  {key:'a',  label:'A 键（下面/主键）', kind:'button'},
+  {key:'b',  label:'B 键（右边）',      kind:'button'},
+  {key:'x',  label:'X 键（左边）',      kind:'button'},
+  {key:'y',  label:'Y 键（上面）',      kind:'button'},
+  {key:'leftshoulder', label:'LB 左肩键', kind:'button'},
+  {key:'rightshoulder',label:'RB 右肩键', kind:'button'},
+  {key:'lefttrigger', label:'LT 左扳机（按到底）', kind:'trigger'},
+  {key:'righttrigger',label:'RT 右扳机（按到底）', kind:'trigger'},
+  {key:'back',  label:'Select / Back', kind:'button'},
+  {key:'start', label:'Start',         kind:'button'},
+  {key:'leftstick',  label:'L3 左摇杆按下', kind:'button'},
+  {key:'rightstick', label:'R3 右摇杆按下', kind:'button'},
+  {key:'leftx',  label:'左摇杆 → 向右推到底', kind:'axis', sign:+1},
+  {key:'lefty',  label:'左摇杆 ↑ 向上推到底', kind:'axis', sign:-1},
+  {key:'rightx', label:'右摇杆 → 向右推到底', kind:'axis', sign:+1},
+  {key:'righty', label:'右摇杆 ↑ 向上推到底', kind:'axis', sign:-1},
+];
+const EN_LABELS = ['A (bottom)', 'B (right)', 'X (left)', 'Y (top)',
+  'LB (left shoulder)', 'RB (right shoulder)',
+  'LT (press fully)', 'RT (press fully)',
+  'Select / Back', 'Start',
+  'L3 (press left stick)', 'R3 (press right stick)',
+  'Left stick → push right', 'Left stick ↑ push up',
+  'Right stick → push right', 'Right stick ↑ push up'];
+const SHORT_ZH = ['A','B','X','Y','LB','RB','LT','RT','选择','开始','L3','R3',
+  '左摇杆右','左摇杆上','右摇杆右','右摇杆上'];
+const SHORT_EN = ['A','B','X','Y','LB','RB','LT','RT','Select','Start','L3','R3',
+  'Left stick right','Left stick up','Right stick right','Right stick up'];
+const HINT_ZH = [
+ '请按 A（下面那个键）','请按 B（右边那个键）','请按 X（左边那个键）','请按 Y（上面那个键）',
+ '请按 LB 左肩键','请按 RB 右肩键','请把 LT 左扳机按到底','请把 RT 右扳机按到底',
+ '请按 Select / Back','请按 Start','请按下左摇杆（L3）','请按下右摇杆（R3）',
+ '请把左摇杆向右推到底','请把左摇杆向上推到底','请把右摇杆向右推到底','请把右摇杆向上推到底'
+];
+const HINT_EN = [
+ 'Press A (bottom)','Press B (right)','Press X (left)','Press Y (top)',
+ 'Press LB (left shoulder)','Press RB (right shoulder)','Press LT fully','Press RT fully',
+ 'Press Select / Back','Press Start','Click left stick (L3)','Click right stick (R3)',
+ 'Push left stick right','Push left stick up','Push right stick right','Push right stick up'
+];
+const SAY_ZH = ['按 A','按 B','按 X','按 Y','按 LB','按 RB','按 LT 到底','按 RT 到底',
+ '按 Select','按 Start','按下左摇杆','按下右摇杆',
+ '左摇杆向右','左摇杆向上','右摇杆向右','右摇杆向上'];
+const SAY_EN = ['Press A','Press B','Press X','Press Y','Press LB','Press RB','Press LT fully','Press RT fully',
+ 'Press Select','Press Start','Click left stick','Click right stick',
+ 'Push left stick right','Push left stick up','Push right stick right','Push right stick up'];
+const state = {
+  pads: [], sel: null, learning: false, idx: 0, userStarted: false,
+  learned: {},   // key -> {type:'b'|'a', index:int, invert?:bool}
+  prevBtn: {}, prevAxis: {},
+  lastEventAt: 0,
+};
+
+// ---------- 工具 ----------
+const $ = id => document.getElementById(id);
+function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('show');
+  clearTimeout(toast._t); toast._t=setTimeout(()=>t.classList.remove('show'), 1600); }
+let LANG = (navigator.language||'zh').toLowerCase().startsWith('zh') ? 'zh' : 'en';
+const T = (zh, en) => LANG === 'en' ? en : zh;
+try {
+  const ql = new URLSearchParams(location.search).get('lang');
+  if (ql === 'en' || ql === 'zh') LANG = ql;
+} catch(e){}
+const EN_MAP = {
+ 'WoWPad — 魔兽手柄映射助手': 'WoWPad — WoW Controller Mapper',
+ '— 魔兽手柄映射助手': '— WoW Controller Mapper',
+ '网页直接读手柄 → 学按键 → 生成 WoW 映射文件。纯本地，不联网。': 'Read controller → learn buttons → generate a WoW mapping file. Local only.',
+ '1. 输入与学习（先按几下键让浏览器标记连接）': '1. Input & Learning (press a few buttons to connect)',
+ '开始学习': 'Start',
+ '重来': 'Reset',
+ '点「开始学习」后，图上对应的键会闪烁，照着按即可。': 'Press Start — the target key flashes on the diagram. Just press it.',
+ '原始输入（B0–B14 / A0–A9，调试用；平时不用看）': 'Raw input (B0–B14 / A0–A9, debug only)',
+ '示意图会在学完按键后按你的映射高亮；摇杆点位置跟随实时输入。 没高亮说明还没学习这个键（或该键不在标准映射里）。': 'The diagram highlights buttons after learning; stick dots follow live input.',
+ '按顺序学按键（每步停 1 秒）': 'Learn buttons in order (pause 1s each)',
+ '点「开始学习」，然后按提示逐个按手柄。': 'Click Start, then press the keys as prompted.',
+ '说明：按物理位置认键；摇杆向右/上推到底；扳机按到底。': 'Tip: map by physical position; push sticks right/up fully; press triggers fully.',
+ '2. 生成映射': '2. Generate mapping',
+ '十字键是 hat0（大多数 DInput 手柄）': 'D-pad is hat0 (most DInput pads)',
+ '生成 / 刷新': 'Generate / Refresh',
+ 'A/B 对调': 'Swap A/B',
+ '查社区映射库（SDL_GameControllerDB）': 'Look up community DB (SDL_GameControllerDB)',
+ '按 VID/PID 匹配已有映射；世界上的手柄是有限的，大部分都有人配过。': 'Match by VID/PID — most controllers already have a mapping.',
+ '复制映射': 'Copy mapping',
+ '下载 .txt': 'Download .txt',
+ '直接写入 WoW 文件…': 'Write to WoW file…',
+ '复制 AI 诊断包': 'Copy AI diagnostics',
+ '把 gamecontrollerdb.txt（或整个 WTF 文件夹）拖到这里，或点此选择文件 —— 直接写入，不用知道路径；会自动下载备份。': 'Drop gamecontrollerdb.txt (or the WTF folder) here, or click to pick — writes directly, backup downloaded automatically.',
+ '路径不知道？点「直接写入」或把 gamecontrollerdb.txt 拖进虚线框（自动备份）。写完完全重启 WoW，游戏内输入 /console GamePadEnable 1，到「按键设置 → Gamepad」绑定。': 'No path? Use Write or drag the file into the box (auto backup). Fully restart WoW, then /console GamePadEnable 1 and bind under Keybindings → Gamepad.',
+ '3. 为什么需要这一层？': '3. Why this layer?',
+ 'macOS 的「游戏控制器」只认 Xbox/PS/Switch/MFi；杂牌 DInput 只能当普通 HID。Chrome 能直接读原始输入，WoW 内置 SDL2，给一条映射即可。本工具把「读手柄 → 学按键 → 生成映射」做成网页。': 'macOS Game Controller only supports Xbox/PS/Switch/MFi. Generic DInput pads are plain HID: Chrome can read them and WoW uses SDL2, so one mapping is enough.',
+ 'AI 排查：复制「AI 诊断包」发给 AI，即可根据设备与学习结果判断问题。': 'AI debug: copy the diagnostics package and send it to an AI.',
+ '4. 手柄信息（调试/排查用）': '4. Controller info (debug)',
+ '（未检测到手柄，先按几下键/摇杆）': '(No controller — press some buttons)',
+ '未连接': 'Not connected',
+ '设备名': 'Name',
+ 'GUID 来源': 'GUID source',
+ '按钮数': 'Buttons',
+ '轴数': 'Axes',
+ '识别方式': 'Detected via',
+ 'macOS 系统面板不认杂牌 DInput 手柄，但 Chrome 能读、WoW 走内置 SDL，只要映射文件。': 'macOS settings may ignore generic DInput pads; Chrome can read them and WoW uses SDL — a mapping file is enough.',
+ '设置（一般不用改）': 'Settings (rarely needed)',
+ '语音提示': 'Voice prompts',
+ '语言': 'Language',
+ '跟随浏览器': 'Auto (browser)',
+ '手柄外观': 'Controller skin',
+ '语言默认跟随浏览器；外观仅影响示意图。': 'Language follows the browser; skin only affects the diagram.',
+ '示意图会在学完按键后按你的映射高亮；摇杆点位置跟随实时输入。 没高亮说明还没学习这个键（或该键不在标准映射里）。': 'The diagram highlights buttons after learning; stick dots follow live input.',
+};
+const origText = new WeakMap();
+function applyLang(){
+  const en = LANG === 'en';
+  const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  let n;
+  while ((n = w.nextNode())){
+    if (!origText.has(n)) origText.set(n, n.nodeValue);
+    const orig = origText.get(n);
+    const key = orig.trim();
+    if (!key) continue;
+    const norm = key.replace(/\s+/g, ' ');
+    const tr = EN_MAP[key] || EN_MAP[norm];
+    n.nodeValue = en && tr ? orig.replace(key, tr) : orig;
+  }
+  document.documentElement.lang = en ? 'en' : 'zh-CN';
+  document.title = en ? 'WoWPad — WoW Controller Mapper' : 'WoWPad — 魔兽手柄映射助手';
+  document.querySelectorAll('[placeholder]').forEach(el => {
+    if (!el.dataset.phOrig) el.dataset.phOrig = el.placeholder;
+    const o = el.dataset.phOrig;
+    el.placeholder = en ? (o === '如 MGV2170' ? 'e.g. MGV2170' : o) : o;
+  });
+}
+let VOICE_ON = true;
+function speak(text){
+  if (!VOICE_ON || !('speechSynthesis' in window)) return;
+  try {
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = LANG === 'en' ? 'en-US' : 'zh-CN';
+    u.rate = 0.95;
+    speechSynthesis.cancel();
+    speechSynthesis.speak(u);
+  } catch(e){}
+}
+function hex4(n){ return n.toString(16).padStart(4,'0'); }
+function parseIds(id){
+  const m = /vendor:\s*([0-9a-f]{4}).*product:\s*([0-9a-f]{4})/i.exec(id||'');
+  return m ? {vendor:m[1].toLowerCase(), product:m[2].toLowerCase()} : null;
+}
+function makeGuid(vendor, product){
+  // SDL bus=USB(0x0003) + CRC 0 + vendor LE + 0 + product LE + 0 + version 0 + 0
+  const v = (vendor||'0000').padStart(4,'0').toLowerCase();
+  const p = (product||'0000').padStart(4,'0').toLowerCase();
+  const vLE = v.slice(2,4)+v.slice(0,2);
+  const pLE = p.slice(2,4)+p.slice(0,2);
+  return '0300' + '0000' + vLE + '0000' + pLE + '0000' + '0000' + '0000';
+}
+function axesOf(pad){ return Array.from(pad.axes||[]); }
+function buttonsOf(pad){ return Array.from(pad.buttons||[]); }
+
+// ---------- 主循环 ----------
+let rafId = null;
+function tick(){
+  const pads = navigator.getGamepads ? Array.from(navigator.getGamepads()).filter(Boolean) : [];
+  state.pads = pads;
+  if (state.sel === null && pads.length) state.sel = pads[0].index;
+  const pad = pads.find(p => p.index === state.sel) || pads[0] || null;
+  if (pad) state.sel = pad.index;
+  renderDevice(pad);
+  renderInput(pad);
+  renderSVG(pad);
+  if (state.learning && !state.devFrozen) handleLearn(pad);
+  rafId = requestAnimationFrame(tick);
+}
+
+function renderDevice(pad){
+  const sel = $('padSelect');
+  const opts = pads => pads.map(p => `<option value="${p.index}">${p.id} [${p.index}]</option>`).join('');
+  const sig = state.pads.map(p=>p.id+p.index).join('|');
+  if (sel.dataset.sig !== sig){
+    sel.innerHTML = state.pads.length ? opts(state.pads) : '<option>（未检测到手柄，先按几下键/摇杆）</option>';
+    sel.dataset.sig = sig;
+  }
+  sel.value = pad ? String(pad.index) : '';
+  $('padState').textContent = pad ? '已连接' : '未连接';
+  $('padState').className = 'pill ' + (pad ? 'ok' : 'bad');
+  if (!pad){ $('iName').textContent='—'; return; }
+  $('iName').textContent = pad.id;
+  const ids = parseIds(pad.id);
+  $('iIds').textContent = ids ? `Vendor ${ids.vendor} / Product ${ids.product}` : '未从 id 解析到 VID/PID（可手动填）';
+  $('iButtons').textContent = pad.buttons.length;
+  $('iAxes').textContent = pad.axes.length + '（' + axesOf(pad).map(a=>a.toFixed(2)).join(' ') + '）';
+  $('iMapping').textContent = pad.mapping || '(none，原始设备)';
+  if (ids){ if (!$('vid').value) $('vid').value = ids.vendor; if (!$('pid').value) $('pid').value = ids.product; }
+  $('macWarn').style.display = (pad.mapping === '' || pad.mapping === undefined) ? 'block' : 'none';
+}
+
+function renderInput(pad){
+  const grid = $('btnGrid'); const axesBox = $('axisGrid');
+  if (!pad){ grid.innerHTML=''; axesBox.innerHTML=''; return; }
+  const btns = buttonsOf(pad);
+  if (grid.dataset.n !== String(btns.length)){
+    grid.innerHTML = btns.map((b,i)=>`<span class="btnchip" data-i="${i}">B${i}</span>`).join('');
+    grid.dataset.n = btns.length;
+  }
+  btns.forEach((b,i)=>{ const el=grid.querySelector(`[data-i="${i}"]`); if(!el) return;
+    const on = b.pressed || b.value > 0.5;
+    el.classList.toggle('on', on);
+    el.textContent = 'B'+i + (on && b.value!==1 ? ' ' + b.value.toFixed(2) : '');
+  });
+  const ax = axesOf(pad);
+  if (axesBox.dataset.n !== String(ax.length)){
+    axesBox.innerHTML = ax.map((v,i)=>`<div class="axis"><b>A${i}</b><div class="bar"><i data-ax="${i}"></i></div><span data-val="${i}" style="width:48px;text-align:right">0.00</span></div>`).join('');
+    axesBox.dataset.n = ax.length;
+  }
+  ax.forEach((v,i)=>{
+    const bar = axesBox.querySelector(`[data-ax="${i}"]`);
+    const val = axesBox.querySelector(`[data-val="${i}"]`);
+    if (bar){ const pct = Math.min(1, Math.abs(v)); bar.style.width = (pct*50)+'%';
+      bar.style.left = v>=0 ? '50%' : (50-pct*50)+'%'; }
+    if (val) val.textContent = v.toFixed(2);
+  });
+}
+
+// ---------- 学习 ----------
+function newEvent(pad, type, index, value, sign){
+  const now = performance.now();
+  if (now - state.lastEventAt < 120) return false; // debounce
+  const step = STEPS[state.idx];
+  if (!step) return false;
+  let ok = false;
+  if (step.kind === 'button' && type === 'button' && value > 0.5){
+    state.learned[step.key] = {type:'b', index};
+    ok = true;
+  } else if (step.kind === 'trigger'){
+    if (type === 'button' && value > 0.5){ state.learned[step.key] = {type:'b', index}; ok = true; }
+    else if (type === 'axis' && Math.abs(value) > 0.5){ state.learned[step.key] = {type:'a', index}; ok = true; }
+  } else if (step.kind === 'axis' && type === 'axis' && Math.abs(value) > 0.5){
+    const invert = (value>0) !== (step.sign>0);
+    state.learned[step.key] = {type:'a', index, invert, sign: Math.sign(value)};
+    ok = true;
+  }
+  if (ok){ state.idx++; state.lastEventAt = now; renderSteps(); updatePrompt(); maybeFinish(); }
+  return ok;
+}
+
+function handleLearn(pad){
+  if (!pad) return;
+  const btns = buttonsOf(pad);
+  btns.forEach((b,i)=>{
+    const prev = state.prevBtn[i] || false;
+    const now = b.pressed || b.value > 0.5;
+    if (now !== prev){ state.prevBtn[i] = now; newEvent(pad, 'button', i, now?1:0); }
+  });
+  const ax = axesOf(pad);
+  ax.forEach((v,i)=>{
+    // 0-7 都接受：Chrome 对未映射设备可能把右摇杆 Y 报成轴 5（实测）；8/9 是 hat 的特殊轴，常驻怪值（如 A9=1.29），排除
+    if (i === 8 || i === 9) return;
+    const prev = state.prevAxis[i];
+    let bucket = v > 0.5 ? 1 : v < -0.5 ? -1 : 0;
+    if (bucket !== 0 && bucket !== prev){ state.prevAxis[i] = bucket; newEvent(pad,'axis',i,v); }
+    else if (bucket === 0 && prev !== undefined){ state.prevAxis[i] = 0; }
+  });
+}
+
+function renderSteps(){
+  const g = $('stepGrid');
+  g.innerHTML = STEPS.map((s, i)=>{
+    const l = state.learned[s.key];
+    const cls = i < state.idx ? 'done' : i === state.idx ? 'cur' : '';
+    const val = l ? (l.type + l.index + (l.invert ? '~' : '')) : '';
+    const lbl = LANG === 'en' ? EN_LABELS[i] : s.label;
+    return `<div class="step ${cls}"><span>${lbl}</span><span class="val">${val}</span></div>`;
+  }).join('');
+  $('progress').textContent = `${state.idx} / ${STEPS.length}`;
+}
+function updatePrompt(){
+  const st = STEPS[state.idx];
+  if (state.learning && st) {
+    const hint = LANG === 'en' ? HINT_EN[state.idx] : HINT_ZH[state.idx];
+    $('prompt').innerHTML = `<span class="big">${hint}</span>`;
+    speak(LANG === 'en' ? SAY_EN[state.idx] : SAY_ZH[state.idx]);
+  } else if (state.userStarted && !st) {
+    $('prompt').innerHTML = LANG === 'en' ? 'All done ✓ generate the mapping' : '全部学完 ✓ 生成映射看看';
+  } else {
+    $('prompt').innerHTML = LANG === 'en'
+      ? 'Click <b>Start Learning</b>, then press the keys as prompted.'
+      : '点上面的「开始学习」，然后按提示逐个按手柄。';
+  }
+}
+function maybeFinish(){
+  if (state.idx >= STEPS.length){
+    state.learning = false; generate();
+    toast(LANG === 'en' ? 'Learning complete — mapping generated' : '学习完成，已生成映射');
+    speak(LANG === 'en' ? 'Done' : '完成');
+    setTimeout(() => { const el = $('mapping'); if (el) el.scrollIntoView({behavior:'smooth', block:'center'}); }, 500);
+  }
+}
+function startLearn(){
+  state.learning = true; state.userStarted = true; state.idx = 0; state.learned = {}; state.lastEventAt = 0;
+  state.devFrozen = false;
+  try { if (location.hash) history.replaceState(null, '', location.pathname); } catch(e){}
+  state.prevBtn = {}; state.prevAxis = {};
+  renderSteps(); updatePrompt();
+  const p = state.pads.find(x=>x.index===state.sel);
+  if (p) { // 初始化按下状态，避免把已按住的键当成事件
+    buttonsOf(p).forEach((b,i)=>{ state.prevBtn[i] = b.pressed || b.value>0.5; });
+    axesOf(p).forEach((v,i)=>{ state.prevAxis[i] = v>0.5?1:v<-0.5?-1:0; });
+  }
+}
+
+// ---------- 生成 ----------
+const FIELD_ORDER = ['a','b','x','y','back','start','guide','leftshoulder','rightshoulder',
+  'leftstick','rightstick','lefttrigger','righttrigger','misc1'];
+function generate(){
+  const vid = ($('vid').value||'0000').replace(/^0x/i,'').padStart(4,'0').toLowerCase();
+  const pid = ($('pid').value||'0000').replace(/^0x/i,'').padStart(4,'0').toLowerCase();
+  const guid = makeGuid(vid, pid);
+  const name = (state.pads.find(p=>p.index===state.sel)||{}).id || 'DInput Gamepad';
+  const parts = [guid, name.replace(/,/g,' '), 'platform:Mac OS X'];
+  for (const f of FIELD_ORDER){
+    const l = state.learned[f]; if (!l) continue;
+    parts.push(f + ':' + l.type + l.index + (l.invert ? '~' : ''));
+  }
+  // 摇杆：DInput 在 SDL 里固定是 a0/a1(左) a2/a3(右)；浏览器捕获的轴号可能有偏移
+  const canon = {leftx:'a0', lefty:'a1', rightx:'a2', righty:'a3'};
+  for (const key of ['leftx','lefty','rightx','righty']){
+    const l = state.learned[key]; if (!l) continue;
+    parts.push(key + ':' + canon[key] + (l.invert ? '~' : ''));
+  }
+  if ($('hasHat').checked){
+    parts.push('dpup:h0.1','dpdown:h0.4','dpleft:h0.8','dpright:h0.2');
+  }
+  // 去重（如果某个字段重复）
+  const seen = new Set(); const clean = [];
+  for (const p of parts){ const k=p.split(':')[0]; if (seen.has(k) && k.includes(':')) continue; seen.add(k); clean.push(p); }
+  $('mapping').value = clean.join(',') + ',';
+  renderSpecies();
+}
+
+// ---------- 手柄示意图 ----------
+const SVG_FIELDS = [['a','vA','tA'],['b','vB','tB'],['x','vX','tX'],['y','vY','tY'],
+  ['leftshoulder','vLB','tLB'],['rightshoulder','vRB','tRB'],
+  ['lefttrigger','vLT','tLT'],['righttrigger','vRT','tRT'],
+  ['back','vBack',null],['start','vStart',null]];
+function fieldIndex(f){
+  const l = state.learned[f];
+  if (l && l.type === 'b') return l.index;
+  if (state.communityMap && state.communityMap[f]){
+    const m = /^b(\d+)$/.exec(state.communityMap[f]); if (m) return parseInt(m[1],10);
+  }
+  return null;
+}
+const SKIN_POS = {
+  xbox:   {vA:{x:368,y:168}, vB:{x:400,y:136}, vX:{x:336,y:136}, vY:{x:368,y:104}},
+  ps:     {vA:{x:368,y:168}, vB:{x:400,y:136}, vX:{x:336,y:136}, vY:{x:368,y:104}},
+  switch: {vA:{x:400,y:136}, vB:{x:368,y:168}, vX:{x:368,y:104}, vY:{x:336,y:136}}
+};
+const SKIN_GLYPH = {
+  xbox:   {vA:'A', vB:'B', vX:'X', vY:'Y'},
+  ps:     {vA:'✕', vB:'○', vX:'□', vY:'△'},
+  switch: {vA:'A', vB:'B', vX:'X', vY:'Y'}
+};
+function applySkin(skin){
+  const svg = $('padSvg'); if (!svg) return;
+  svg.classList.remove('skin-xbox','skin-ps','skin-switch');
+  svg.classList.add('skin-' + (SKIN_POS[skin] ? skin : 'xbox'));
+  const pos = SKIN_POS[skin] || SKIN_POS.xbox;
+  const glyph = SKIN_GLYPH[skin] || SKIN_GLYPH.xbox;
+  for (const id of ['vA','vB','vX','vY']){
+    const c = $(id), t = $('t' + id.slice(1));
+    const p = pos[id];
+    if (c && p){ c.setAttribute('cx', p.x); c.setAttribute('cy', p.y); }
+    if (t && p){ t.setAttribute('x', p.x); t.setAttribute('y', p.y + 5); t.textContent = glyph[id]; }
+  }
+  state.skin = skin;
+}
+function renderSVG(pad){
+  if (!pad) return;
+  const svgEl = $('padSvg');
+  if (svgEl){
+    svgEl.querySelectorAll('.target').forEach(el => el.classList.remove('target'));
+    svgEl.querySelectorAll('.targetlbl').forEach(el => el.classList.remove('targetlbl'));
+    svgEl.querySelectorAll('.arrow.show').forEach(el => el.classList.remove('show'));
+  }
+  const pressed = new Set();
+  buttonsOf(pad).forEach((b,i)=>{ if (b.pressed || b.value>0.5) pressed.add(i); });
+  for (const [f, vid, tid] of SVG_FIELDS){
+    const i = fieldIndex(f);
+    const on = i !== null && pressed.has(i);
+    const el = $(vid); if (el) el.classList.toggle('on', !!on);
+    const t = tid ? $(tid) : null; if (t) t.classList.toggle('onlbl', !!on);
+  }
+  const ax = axesOf(pad);
+  const dotL = $('vDotL'), dotR = $('vDotR');
+  const lx = ax[0]||0, ly = ax[1]||0;
+  let rx = ax[2]||0;
+  // Chrome 对未映射设备可能把右摇杆 Y 放到 a5；取有变化的那个
+  let ry = Math.abs(ax[3]||0) >= Math.abs(ax[5]||0) ? (ax[3]||0) : (ax[5]||0);
+  if (dotL){ dotL.setAttribute('cx', 152 + lx*24); dotL.setAttribute('cy', 146 + ly*24); }
+  if (dotR){ dotR.setAttribute('cx', 330 + rx*24); dotR.setAttribute('cy', 214 + ry*24); }
+  const l3 = fieldIndex('leftstick'), r3 = fieldIndex('rightstick');
+  const sL = $('vStickL'), sR = $('vStickR');
+  if (sL) sL.classList.toggle('on', l3 !== null && pressed.has(l3));
+  if (sR) sR.classList.toggle('on', r3 !== null && pressed.has(r3));
+  // 学习时：先高亮「该按的键」，让听不到语音的人也能看
+  if (state.learning && STEPS[state.idx]){
+    const TARGET = {a:'vA',b:'vB',x:'vX',y:'vY',leftshoulder:'vLB',rightshoulder:'vRB',
+      lefttrigger:'vLT',righttrigger:'vRT',back:'vBack',start:'vStart',
+      leftstick:'vDotL',rightstick:'vDotR'};
+    const TID = {vA:'tA',vB:'tB',vX:'tX',vY:'tY',vLB:'tLB',vRB:'tRB',vLT:'tLT',vRT:'tRT'};
+    const ARROWS = {leftx:'arrL', lefty:'arrLu', rightx:'arrR', righty:'arrRu'};
+    const key = STEPS[state.idx].key;
+    if (ARROWS[key]) {
+      const a = $(ARROWS[key]); if (a) a.classList.add('show');
+    } else {
+      const id = TARGET[key];
+      if (id){ const el = $(id); if (el) el.classList.add('target');
+        const t = TID[id] ? $(TID[id]) : null; if (t) t.classList.add('targetlbl'); }
+    }
+  }
+}
+
+// ---------- 社区映射库 ----------
+const COMMUNITY_DB_URL = 'https://raw.githubusercontent.com/mdqinc/SDL_GameControllerDB/master/gamecontrollerdb.txt';
+function parseCommunityLine(line){
+  const map = {};
+  line.split(',').slice(1).forEach(tok => {
+    const i = tok.indexOf(':'); if (i < 0) return;
+    const k = tok.slice(0,i), v = tok.slice(i+1);
+    if (/^[a-z0-9]+$/i.test(k)) map[k] = v;
+  });
+  return map;
+}
+function guidsOf(line){
+  const guid = (line.split(',')[0]||'').trim();
+  if (!/^[0-9a-fA-F]{32}$/.test(guid)) return null;
+  const v = guid.substr(8,4), p = guid.substr(16,4);
+  return { vendor: (v.substr(2,2)+v.substr(0,2)).toLowerCase(),
+           product: (p.substr(2,2)+p.substr(0,2)).toLowerCase() };
+}
+async function lookupCommunity(){
+  const vid = ($('vid').value||'').replace(/^0x/i,'').padStart(4,'0').toLowerCase();
+  const pid = ($('pid').value||'').replace(/^0x/i,'').padStart(4,'0').toLowerCase();
+  if (!vid || vid === '0000'){ toast('先把 Vendor/Product 填上（选中手柄会自动填）'); return; }
+  $('lookupState').textContent = '下载社区库…（约 600KB）';
+  try {
+    const res = await fetch(COMMUNITY_DB_URL, {cache:'no-store'});
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const text = await res.text();
+    let found = null;
+    for (const ln of text.split('\n')){
+      if (!ln || ln[0] === '#') continue;
+      const ids = guidsOf(ln);
+      if (ids && ids.vendor === vid && ids.product === pid){ found = ln.trim(); break; }
+    }
+    state.communityLine = found;
+    state.communityMap = found ? parseCommunityLine(found) : null;
+    const box = $('communityBox');
+    box.style.display = 'block';
+    if (found){
+      $('lookupState').textContent = '命中社区映射';
+      box.innerHTML = T('✅ 社区库已有该设备映射：', '✅ Community mapping found:') +
+        '<br><code style="display:block;white-space:pre-wrap;margin-top:6px">' + found + '</code>' +
+        '<div style="margin-top:8px"><button id="useCommunity">' + T('用这条覆盖','Use this') + '</button> <button id="cmpCommunity">' + T('和我的学习结果对比','Compare with mine') + '</button></div>';
+      $('useCommunity').onclick = ()=>{ $('mapping').value = found; toast('已填入社区映射'); };
+      $('cmpCommunity').onclick = compareCommunity;
+    } else {
+      $('lookupState').textContent = '未命中';
+      box.innerHTML = T('社区库里没有该 VID/PID 的映射（杂牌手柄很常见）。<br>用上面的学习流程生成一条，欢迎提交回 SDL_GameControllerDB，下一个玩家连上就能直接校验使用。', 'No community mapping for this VID/PID (common for generic pads).<br>Learn it here and submit it back to SDL_GameControllerDB.');
+    }
+  } catch(e){
+    $('lookupState').textContent = '下载失败：' + e.message + '（离线也能用，直接学习即可）';
+  }
+}
+function compareCommunity(){
+  const fields = ['a','b','x','y','leftshoulder','rightshoulder','lefttrigger','righttrigger','back','start','leftstick','rightstick','leftx','lefty','rightx','righty'];
+  const rows = [];
+  for (const f of fields){
+    const mine = state.learned[f] ? (state.learned[f].type + state.learned[f].index) : '—';
+    const theirs = state.communityMap && state.communityMap[f] ? state.communityMap[f] : '—';
+    rows.push(f + ': 我的=' + mine + '  社区=' + theirs + (mine === theirs ? ' ✅' : ' ⚠️'));
+  }
+  $('communityBox').innerHTML = '对比（我的学习 vs 社区）：<br><code style="display:block;white-space:pre-wrap;margin-top:6px">' + rows.join('\n') + '</code>';
+}
+
+// ---------- 按钮事件 ----------
+$('padSelect').addEventListener('change', e => { state.sel = parseInt(e.target.value,10); });
+$('startBtn').addEventListener('click', startLearn);
+$('resetBtn').addEventListener('click', ()=>{ state.learning=false; state.idx=0; state.learned={}; renderSteps(); updatePrompt(); $('mapping').value=''; });
+$('genBtn').addEventListener('click', generate);
+$('swapAB').addEventListener('click', ()=>{
+  const a = state.learned.a, b = state.learned.b;
+  if (!a || !b){ toast('先学完 A 和 B 两步'); return; }
+  state.learned.a = {type:b.type, index:b.index};
+  state.learned.b = {type:a.type, index:a.index};
+  generate(); renderSteps(); toast('已对调 A / B');
+});
+$('lookupBtn').addEventListener('click', lookupCommunity);
+$('copyBtn').addEventListener('click', async ()=>{
+  try { await navigator.clipboard.writeText($('mapping').value); toast('已复制映射'); }
+  catch(e){ $('mapping').select(); document.execCommand('copy'); toast('已复制（兼容模式）'); }
+});
+$('dlBtn').addEventListener('click', ()=>{
+  const blob = new Blob([$('mapping').value + '\n'], {type:'text/plain'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'gamecontrollerdb.mygamepad.txt';
+  a.click(); URL.revokeObjectURL(a.href);
+});
+$('diagBtn').addEventListener('click', async ()=>{
+  const pad = state.pads.find(p=>p.index===state.sel);
+  const diag = {
+    tool: 'WoWPad web', time: new Date().toISOString(),
+    userAgent: navigator.userAgent,
+    platform: navigator.platform,
+    gamepad: pad ? { id: pad.id, index: pad.index, mapping: pad.mapping,
+      buttons: pad.buttons.length, axes: Array.from(pad.axes) } : null,
+    learned: state.learned,
+    mapping: $('mapping').value,
+    wowTarget: 'World of Warcraft/_cn_beta_/WTF/gamecontrollerdb.txt',
+    notes: 'macOS GameController 可能不认该手柄；WoW 内置 SDL2 读 gamecontrollerdb.txt。'
+  };
+  try { await navigator.clipboard.writeText(JSON.stringify(diag, null, 2)); toast('AI 诊断包已复制'); }
+  catch(e){ toast('复制失败：' + e.message); }
+});
+
+// ---------- 新物种提交 ----------
+const COMMUNITY_REPO_ISSUES = 'https://github.com/mdqinc/SDL_GameControllerDB/issues/new';
+function renderSpecies(){
+  const pad = state.pads.find(p => p.index === state.sel);
+  const box = $('newSpecies');
+  if (!pad || !state.learned.a){ if (box) box.style.display = 'none'; return; }
+  const vid = ($('vid').value || '0000'), pid = ($('pid').value || '0000');
+  const mapping = $('mapping').value.trim();
+  const submit = { device: pad.id, vendor: vid, product: pid,
+    buttons: pad.buttons.length, axes: pad.axes.length,
+    mapping, submitter: 'WoWPad web tool', date: new Date().toISOString().slice(0, 10) };
+  const title = encodeURIComponent('Add mapping: ' + pad.id + ' (' + vid + ':' + pid + ')');
+  const body = encodeURIComponent(
+    'Hi, please add a mapping for this controller.\n\n```\n' + mapping + '\n```\n\n' +
+    'Device info:\n```json\n' + JSON.stringify(submit, null, 2) + '\n```\n\n' +
+    'Submitted from WoWPad web tool. Please attach a photo of the nameplate if possible.');
+  box.style.display = 'block';
+  box.innerHTML = T('🆕 <b>新物种？</b>如果社区库里没有这个型号，别浪费这次学习：<br>', '🆕 <b>New species?</b> If the community DB lacks this model, don\'t waste this learning:<br>') +
+    '<span class="hint">设备：' + pad.id + ' · ' + pad.buttons.length + ' 键 / ' + pad.axes.length + ' 轴</span><br>' +
+    '<div style="margin-top:8px"><button id="copySpecies">复制提交包 JSON</button> ' +
+    '<a class="pill" href="' + COMMUNITY_REPO_ISSUES + '?title=' + title + '&body=' + body + '" target="_blank" rel="noopener">GitHub 提 Issue（已预填）</a></div>' +
+    '<div class="hint" style="margin-top:6px">' + T('建议拍一张手柄背面/包装铭牌照片附在 Issue 里；以后做 OCR/AI 识别型号就靠这些。','Attach a photo of the nameplate to the issue if possible — it helps OCR/AI model detection later.') + '</div>';
+  $('copySpecies').onclick = async () => {
+    try { await navigator.clipboard.writeText(JSON.stringify(submit, null, 2)); toast('提交包已复制'); }
+    catch(e){ toast('复制失败：' + e.message); }
+  };
+}
+
+// ---------- 直接写入 WoW 文件（点选 / 拖拽） ----------
+function downloadBackup(text){
+  try {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([text], { type: 'text/plain' }));
+    a.download = 'gamecontrollerdb.backup.txt';
+    a.click(); URL.revokeObjectURL(a.href);
+  } catch(e){}
+}
+async function writeToHandle(handle){
+  const text = ($('mapping').value || '').trim();
+  if (!text){ toast('先生成映射'); return; }
+  try {
+    const file = await handle.getFile();
+    const old = await file.text();
+    downloadBackup(old);
+    const guid = text.split(',')[0];
+    let replaced = false;
+    const out = old.split('\n').map(ln => {
+      if (ln.startsWith(guid + ',')) { replaced = true; return text; }
+      return ln;
+    });
+    if (!replaced) out.push(text);
+    const w = await handle.createWritable();
+    await w.write(out.join('\n').replace(/\n*$/, '\n'));
+    await w.close();
+    toast(replaced ? '已替换映射并下载备份；重启 WoW 生效' : '已追加映射并下载备份；重启 WoW 生效');
+    const z = $('dropZone');
+    if (z) z.innerHTML = T('✅ 已写入 ','✅ Written to ') + '<code>' + (file.name || 'gamecontrollerdb.txt') + '</code>' + T('（备份已下载）；<b>完全重启 WoW</b> 后生效。',' (backup downloaded). Fully restart WoW to apply.');
+  } catch(e){ toast('写入失败：' + e.message); }
+}
+async function writeWoWFile(){
+  if (!window.showOpenFilePicker){ toast('此浏览器不支持直接写文件，请用「复制映射」或「下载 .txt」'); return; }
+  try {
+    const [handle] = await window.showOpenFilePicker({
+      types: [{ description: 'gamecontrollerdb.txt', accept: { 'text/plain': ['.txt'] } }],
+      multiple: false
+    });
+    await writeToHandle(handle);
+  } catch(e){
+    if (e && e.name !== 'AbortError') toast('写入失败：' + e.message);
+  }
+}
+async function findMapFile(dir, depth){
+  if (depth < 0) return null;
+  try {
+    for await (const [name, h] of dir.entries()){
+      if (h.kind === 'file' && name.toLowerCase() === 'gamecontrollerdb.txt') return h;
+    }
+    for await (const [name, h] of dir.entries()){
+      if (h.kind === 'directory'){
+        const r = await findMapFile(h, depth - 1);
+        if (r) return r;
+      }
+    }
+  } catch(e){}
+  return null;
+}
+function bindDropZone(){
+  const z = $('dropZone'); if (!z) return;
+  z.addEventListener('click', () => writeWoWFile());
+  z.addEventListener('dragover', e => { e.preventDefault(); z.style.borderColor = 'var(--acc)'; });
+  z.addEventListener('dragleave', () => { z.style.borderColor = 'var(--line)'; });
+  z.addEventListener('drop', async e => {
+    e.preventDefault(); z.style.borderColor = 'var(--line)';
+    if (!window.showOpenFilePicker){ toast('此浏览器不支持直接写文件'); return; }
+    let handle = null;
+    try {
+      const items = Array.from(e.dataTransfer.items || []);
+      for (const it of items){
+        if (it.kind !== 'file' || !it.getAsFileSystemHandle) continue;
+        const h = await it.getAsFileSystemHandle();
+        if (h){ handle = h; break; }
+      }
+    } catch(err){}
+    if (!handle){ toast('无法读取拖入项，请点此用选择器'); return; }
+    try {
+      if (handle.kind === 'directory'){
+        const f = await findMapFile(handle, 5);
+        if (!f){ toast('这个文件夹里没找到 gamecontrollerdb.txt'); return; }
+        handle = f;
+      }
+      await writeToHandle(handle);
+    } catch(err){ toast('写入失败：' + err.message); }
+  });
+}
+function initFsState(){
+  const el = $('fsState');
+  if (!el) return;
+  el.textContent = window.showOpenFilePicker
+    ? '（Chrome 可直接选 gamecontrollerdb.txt 写入，无需知道路径）'
+    : '（当前浏览器不支持直接写文件，用复制/下载）';
+}
+
+$('writeBtn').addEventListener('click', writeWoWFile);
+$('langSel').addEventListener('change', e => {
+  const v = e.target.value;
+  LANG = v === 'auto' ? ((navigator.language || 'zh').toLowerCase().startsWith('zh') ? 'zh' : 'en') : v;
+  applyLang(); updatePrompt(); renderSteps();
+});
+$('skinSel').addEventListener('change', e => applySkin(e.target.value));
+$('voiceOn').addEventListener('change', e => {
+  VOICE_ON = e.target.checked;
+  if (!VOICE_ON && 'speechSynthesis' in window) speechSynthesis.cancel();
+});
+
+// ---------- 启动 ----------
+window.addEventListener('gamepadconnected', e => { toast('已连接：' + e.gamepad.id); });
+window.addEventListener('gamepaddisconnected', e => { toast('已断开：' + e.gamepad.id); });
+renderSteps(); updatePrompt(); initFsState(); applySkin('xbox'); bindDropZone(); applyLang();
+// 开发预览：index.html#step=12 可直接把学习进度定位到某一步（方便截图/调试）
+try {
+  const m = /step=(\d+)/.exec(location.hash);
+  if (m){ state.learning = true; state.userStarted = true; state.idx = Math.min(parseInt(m[1],10), STEPS.length-1);
+    state.devFrozen = /frozen/.test(location.hash); renderSteps(); updatePrompt(); }
+} catch(e){}
+tick();
+</script>
+</body>
+</html>
