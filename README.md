@@ -9,6 +9,8 @@ No driver, no install, no backend, no database.
 
 ![ForeverPad card](screenshots/wowpad-card-en.png)
 
+![Demo](screenshots/demo.gif)
+
 ## Why
 
 On macOS, generic DInput pads (Migu, Beitong, Flydigi, no-name Chinese pads…) are plain HID devices. Apple's GameController framework ignores them, so macOS games don't see a gamepad — but **Chrome's Gamepad API does**, and **WoW bundles SDL2**, which only needs a mapping line.

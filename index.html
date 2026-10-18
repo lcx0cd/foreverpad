@@ -333,6 +333,7 @@ function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('sho
   clearTimeout(toast._t); toast._t=setTimeout(()=>t.classList.remove('show'), 1600); }
 let LANG = (navigator.language||'zh').toLowerCase().startsWith('zh') ? 'zh' : 'en';
 const T = (zh, en) => LANG === 'en' ? en : zh;
+const DEMO = parseInt(new URLSearchParams(location.search).get('demo') || '-1', 10);
 try {
   const ql = new URLSearchParams(location.search).get('lang');
   if (ql === 'en' || ql === 'zh') LANG = ql;
@@ -377,6 +378,9 @@ const EN_MAP = {
  '跟随浏览器': 'Auto (browser)',
  '手柄外观': 'Controller skin',
  '语言默认跟随浏览器；外观仅影响示意图。': 'Language follows the browser; skin only affects the diagram.',
+ '更多工具（重新生成 / A/B 对调 / 社区库 / AI 诊断 / 新物种提交）': 'More tools (regenerate / swap A/B / community DB / AI diagnostics / new-species submit)',
+ '已连接': 'Connected',
+ '（none，原始设备）': '(none, raw device)',
  '手动安装（最稳，不需要自动化）': 'Manual install (safest, no automation)',
  '1. 点上面的「复制映射」，或用「下载 gamecontrollerdb.txt」覆盖原文件': '1. Use “Copy mapping” above, or download gamecontrollerdb.txt and overwrite the file',
  '2. 用文本编辑器打开下面对应的文件（没有就新建）': '2. Open the file below in a text editor (create it if missing)',
@@ -437,7 +441,7 @@ function buttonsOf(pad){ return Array.from(pad.buttons||[]); }
 // ---------- 主循环 ----------
 let rafId = null;
 function tick(){
-  const pads = navigator.getGamepads ? Array.from(navigator.getGamepads()).filter(Boolean) : [];
+  const pads = DEMO >= 0 ? [demoPad()] : (navigator.getGamepads ? Array.from(navigator.getGamepads()).filter(Boolean) : []);
   state.pads = pads;
   if (state.sel === null && pads.length) state.sel = pads[0].index;
   const pad = pads.find(p => p.index === state.sel) || pads[0] || null;
@@ -850,6 +854,25 @@ try {
   if (m){ state.learning = true; state.userStarted = true; state.idx = Math.min(parseInt(m[1],10), STEPS.length-1);
     state.devFrozen = /frozen/.test(location.hash); renderSteps(); updatePrompt(); }
 } catch(e){}
+let demoPadCache = null;
+function demoPad(){
+  if (!demoPadCache){
+    demoPadCache = { index:0, id:'MIGU MGV2170-dongle (Vendor: 8f61 Product: f831)', mapping:'', connected:true,
+      buttons: Array.from({length:15},()=>({pressed:false,value:0,touched:false})),
+      axes: Array.from({length:10},()=>0), timestamp: performance.now() };
+  }
+  return demoPadCache;
+}
+if (DEMO >= 0){
+  state.learning = true; state.userStarted = true; state.devFrozen = true;
+  state.idx = Math.min(DEMO, STEPS.length-1);
+  const seq = [['a','b',0],['b','b',1],['x','b',3],['y','b',4],['leftshoulder','b',6],['rightshoulder','b',7],
+    ['lefttrigger','b',8],['righttrigger','b',9],['back','b',10],['start','b',11],['leftstick','b',13],['rightstick','b',14],
+    ['leftx','a',0],['lefty','a',1],['rightx','a',2],['righty','a',3]];
+  state.learned = {};
+  for (let i = 0; i < state.idx; i++){ const [k,tt,ii] = seq[i]; state.learned[k] = {type:tt, index:ii}; }
+  renderSteps(); updatePrompt(); generate();
+}
 tick();
 </script>
 </body>
