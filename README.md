@@ -1,5 +1,8 @@
 # WoWPad — any controller in World of Warcraft on macOS
 
+**Live:** [GitHub Pages](https://lcx0cd.github.io/wowpad/) · [Cloudflare Pages](https://wowpad-4gb.pages.dev/)
+
+
 **Single-file web tool.** Read a generic DInput controller in Chrome, learn its buttons, generate an SDL mapping, and write it straight into WoW's `WTF/gamecontrollerdb.txt`.
 
 No driver, no install, no backend, no database.
