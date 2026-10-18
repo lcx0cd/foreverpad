@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>WoWPad — 魔兽手柄映射助手</title>
+<title>WoWPad — 魔兽世界手柄配置文件生成器</title>
 <!--
   WoWPad — 魔兽手柄映射助手 (MIT License)
   单文件网页工具：用 Chrome/Edge 的 Gamepad API 读取任意 DInput 手柄，
@@ -110,8 +110,8 @@ code { background:#0a0c10; padding:1px 6px; border-radius:5px; font-family: ui-m
 </head>
 <body>
 <div class="wrap">
-  <h1>WoW<span>Pad</span> — 魔兽手柄映射助手</h1>
-  <div class="sub">网页直接读手柄 → 学按键 → 生成 WoW 映射文件。纯本地，不联网。</div>
+  <h1>WoW<span>Pad</span> — 魔兽世界手柄配置文件生成器</h1>
+  <div class="sub">适用于魔兽世界（正式服 / 永恒 / 经典）· 网页直接读手柄 → 学按键 → 生成 gamecontrollerdb.txt</div>
 
   <div class="card">
     <h2>1. 输入与学习（先按几下键让浏览器标记连接）</h2>
@@ -192,13 +192,25 @@ code { background:#0a0c10; padding:1px 6px; border-radius:5px; font-family: ui-m
     <div class="row" style="margin-top:10px">
       <button id="copyBtn">复制映射</button>
       <button id="dlBtn">下载 .txt</button>
-      <button id="writeBtn">直接写入 WoW 文件…</button>
       <button id="diagBtn">复制 AI 诊断包</button>
-      <span class="hint" id="fsState"></span>
     </div>
-    <div id="dropZone" class="hint" style="margin-top:12px;border:2px dashed var(--line);border-radius:10px;padding:16px;text-align:center;cursor:pointer">把 gamecontrollerdb.txt（或整个 WTF 文件夹）拖到这里，或点此选择文件 —— 直接写入，不用知道路径；会自动下载备份。</div>
     <div id="newSpecies" class="hint" style="display:none;margin-top:12px;border-left:3px solid var(--acc);padding:8px 12px;background:#0d1a18;border-radius:6px"></div>
-    <div class="hint" style="margin-top:12px">路径不知道？点「直接写入」或把 gamecontrollerdb.txt 拖进虚线框（自动备份）。写完完全重启 WoW，游戏内输入 /console GamePadEnable 1，到「按键设置 → Gamepad」绑定。</div>
+    <div class="hint" style="margin-top:12px;border-left:3px solid var(--acc);padding:8px 12px;background:#0d1a18;border-radius:6px">
+      <b>手动安装（最稳，不需要自动化）</b><br>
+      <span>1. 点上面的「复制映射」</span><br>
+      <span>2. 用文本编辑器打开下面对应的文件（没有就新建）</span><br>
+      <span>3. 粘贴到文件末尾；如果已有同一设备（同 GUID）的行，替换那一行</span><br>
+      <span>4. 保存，然后完全重启 WoW（不是 /reload）</span><br><br>
+      <b>Windows</b><br>
+      <code>C:\Program Files (x86)\World of Warcraft\_retail_\WTF\gamecontrollerdb.txt</code><br>
+      <code>C:\Program Files (x86)\World of Warcraft\_cn_beta_\WTF\gamecontrollerdb.txt</code><br>
+      <code>C:\Program Files (x86)\World of Warcraft\_classic_\WTF\gamecontrollerdb.txt</code><br><br>
+      <b>macOS</b><br>
+      <code>/Applications/World of Warcraft/_retail_/WTF/gamecontrollerdb.txt</code><br>
+      <code>/Applications/World of Warcraft/_cn_beta_/WTF/gamecontrollerdb.txt</code><br>
+      <code>/Applications/World of Warcraft/_classic_/WTF/gamecontrollerdb.txt</code><br><br>
+      <span>游戏内输入 /console GamePadEnable 1，再到「按键设置 → Gamepad」绑定。</span>
+    </div>
   </div>
 
   <div class="card">
@@ -313,9 +325,9 @@ try {
   if (ql === 'en' || ql === 'zh') LANG = ql;
 } catch(e){}
 const EN_MAP = {
- 'WoWPad — 魔兽手柄映射助手': 'WoWPad — WoW Controller Mapper',
+ 'WoWPad — 魔兽世界手柄配置文件生成器': 'WoWPad — WoW Controller Config Generator',
  '— 魔兽手柄映射助手': '— WoW Controller Mapper',
- '网页直接读手柄 → 学按键 → 生成 WoW 映射文件。纯本地，不联网。': 'Read controller → learn buttons → generate a WoW mapping file. Local only.',
+ '适用于魔兽世界（正式服 / 永恒 / 经典）· 网页直接读手柄 → 学按键 → 生成 gamecontrollerdb.txt': 'For WoW (retail / Forever / classic) · read controller → learn buttons → generate gamecontrollerdb.txt',
  '1. 输入与学习（先按几下键让浏览器标记连接）': '1. Input & Learning (press a few buttons to connect)',
  '开始学习': 'Start',
  '重来': 'Reset',
@@ -333,10 +345,8 @@ const EN_MAP = {
  '按 VID/PID 匹配已有映射；世界上的手柄是有限的，大部分都有人配过。': 'Match by VID/PID — most controllers already have a mapping.',
  '复制映射': 'Copy mapping',
  '下载 .txt': 'Download .txt',
- '直接写入 WoW 文件…': 'Write to WoW file…',
  '复制 AI 诊断包': 'Copy AI diagnostics',
  '把 gamecontrollerdb.txt（或整个 WTF 文件夹）拖到这里，或点此选择文件 —— 直接写入，不用知道路径；会自动下载备份。': 'Drop gamecontrollerdb.txt (or the WTF folder) here, or click to pick — writes directly, backup downloaded automatically.',
- '路径不知道？点「直接写入」或把 gamecontrollerdb.txt 拖进虚线框（自动备份）。写完完全重启 WoW，游戏内输入 /console GamePadEnable 1，到「按键设置 → Gamepad」绑定。': 'No path? Use Write or drag the file into the box (auto backup). Fully restart WoW, then /console GamePadEnable 1 and bind under Keybindings → Gamepad.',
  '3. 为什么需要这一层？': '3. Why this layer?',
  'macOS 的「游戏控制器」只认 Xbox/PS/Switch/MFi；杂牌 DInput 只能当普通 HID。Chrome 能直接读原始输入，WoW 内置 SDL2，给一条映射即可。本工具把「读手柄 → 学按键 → 生成映射」做成网页。': 'macOS Game Controller only supports Xbox/PS/Switch/MFi. Generic DInput pads are plain HID: Chrome can read them and WoW uses SDL2, so one mapping is enough.',
  'AI 排查：复制「AI 诊断包」发给 AI，即可根据设备与学习结果判断问题。': 'AI debug: copy the diagnostics package and send it to an AI.',
@@ -355,6 +365,12 @@ const EN_MAP = {
  '跟随浏览器': 'Auto (browser)',
  '手柄外观': 'Controller skin',
  '语言默认跟随浏览器；外观仅影响示意图。': 'Language follows the browser; skin only affects the diagram.',
+ '手动安装（最稳，不需要自动化）': 'Manual install (safest, no automation)',
+ '1. 点上面的「复制映射」': '1. Click “Copy mapping” above',
+ '2. 用文本编辑器打开下面对应的文件（没有就新建）': '2. Open the file below in a text editor (create it if missing)',
+ '3. 粘贴到文件末尾；如果已有同一设备（同 GUID）的行，替换那一行': '3. Paste at the end; replace any existing line for the same GUID',
+ '4. 保存，然后完全重启 WoW（不是 /reload）': '4. Save, then fully restart WoW (not /reload)',
+ '游戏内输入 /console GamePadEnable 1，再到「按键设置 → Gamepad」绑定。': 'In game: /console GamePadEnable 1, then bind under Keybindings → Gamepad.',
  '示意图会在学完按键后按你的映射高亮；摇杆点位置跟随实时输入。 没高亮说明还没学习这个键（或该键不在标准映射里）。': 'The diagram highlights buttons after learning; stick dots follow live input.',
 };
 const origText = new WeakMap();
@@ -372,7 +388,7 @@ function applyLang(){
     n.nodeValue = en && tr ? orig.replace(key, tr) : orig;
   }
   document.documentElement.lang = en ? 'en' : 'zh-CN';
-  document.title = en ? 'WoWPad — WoW Controller Mapper' : 'WoWPad — 魔兽手柄映射助手';
+  document.title = en ? 'WoWPad — WoW Controller Config Generator' : 'WoWPad — 魔兽世界手柄配置文件生成器';
   document.querySelectorAll('[placeholder]').forEach(el => {
     if (!el.dataset.phOrig) el.dataset.phOrig = el.placeholder;
     const o = el.dataset.phOrig;
@@ -801,101 +817,6 @@ function renderSpecies(){
   };
 }
 
-// ---------- 直接写入 WoW 文件（点选 / 拖拽） ----------
-function downloadBackup(text){
-  try {
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([text], { type: 'text/plain' }));
-    a.download = 'gamecontrollerdb.backup.txt';
-    a.click(); URL.revokeObjectURL(a.href);
-  } catch(e){}
-}
-async function writeToHandle(handle){
-  const text = ($('mapping').value || '').trim();
-  if (!text){ toast('先生成映射'); return; }
-  try {
-    const file = await handle.getFile();
-    const old = await file.text();
-    downloadBackup(old);
-    const guid = text.split(',')[0];
-    let replaced = false;
-    const out = old.split('\n').map(ln => {
-      if (ln.startsWith(guid + ',')) { replaced = true; return text; }
-      return ln;
-    });
-    if (!replaced) out.push(text);
-    const w = await handle.createWritable();
-    await w.write(out.join('\n').replace(/\n*$/, '\n'));
-    await w.close();
-    toast(replaced ? '已替换映射并下载备份；重启 WoW 生效' : '已追加映射并下载备份；重启 WoW 生效');
-    const z = $('dropZone');
-    if (z) z.innerHTML = T('✅ 已写入 ','✅ Written to ') + '<code>' + (file.name || 'gamecontrollerdb.txt') + '</code>' + T('（备份已下载）；<b>完全重启 WoW</b> 后生效。',' (backup downloaded). Fully restart WoW to apply.');
-  } catch(e){ toast('写入失败：' + e.message); }
-}
-async function writeWoWFile(){
-  if (!window.showOpenFilePicker){ toast('此浏览器不支持直接写文件，请用「复制映射」或「下载 .txt」'); return; }
-  try {
-    const [handle] = await window.showOpenFilePicker({
-      types: [{ description: 'gamecontrollerdb.txt', accept: { 'text/plain': ['.txt'] } }],
-      multiple: false
-    });
-    await writeToHandle(handle);
-  } catch(e){
-    if (e && e.name !== 'AbortError') toast('写入失败：' + e.message);
-  }
-}
-async function findMapFile(dir, depth){
-  if (depth < 0) return null;
-  try {
-    for await (const [name, h] of dir.entries()){
-      if (h.kind === 'file' && name.toLowerCase() === 'gamecontrollerdb.txt') return h;
-    }
-    for await (const [name, h] of dir.entries()){
-      if (h.kind === 'directory'){
-        const r = await findMapFile(h, depth - 1);
-        if (r) return r;
-      }
-    }
-  } catch(e){}
-  return null;
-}
-function bindDropZone(){
-  const z = $('dropZone'); if (!z) return;
-  z.addEventListener('click', () => writeWoWFile());
-  z.addEventListener('dragover', e => { e.preventDefault(); z.style.borderColor = 'var(--acc)'; });
-  z.addEventListener('dragleave', () => { z.style.borderColor = 'var(--line)'; });
-  z.addEventListener('drop', async e => {
-    e.preventDefault(); z.style.borderColor = 'var(--line)';
-    if (!window.showOpenFilePicker){ toast('此浏览器不支持直接写文件'); return; }
-    let handle = null;
-    try {
-      const items = Array.from(e.dataTransfer.items || []);
-      for (const it of items){
-        if (it.kind !== 'file' || !it.getAsFileSystemHandle) continue;
-        const h = await it.getAsFileSystemHandle();
-        if (h){ handle = h; break; }
-      }
-    } catch(err){}
-    if (!handle){ toast('无法读取拖入项，请点此用选择器'); return; }
-    try {
-      if (handle.kind === 'directory'){
-        const f = await findMapFile(handle, 5);
-        if (!f){ toast('这个文件夹里没找到 gamecontrollerdb.txt'); return; }
-        handle = f;
-      }
-      await writeToHandle(handle);
-    } catch(err){ toast('写入失败：' + err.message); }
-  });
-}
-function initFsState(){
-  const el = $('fsState');
-  if (!el) return;
-  el.textContent = window.showOpenFilePicker
-    ? '（Chrome 可直接选 gamecontrollerdb.txt 写入，无需知道路径）'
-    : '（当前浏览器不支持直接写文件，用复制/下载）';
-}
-
-$('writeBtn').addEventListener('click', writeWoWFile);
 $('langSel').addEventListener('change', e => {
   const v = e.target.value;
   LANG = v === 'auto' ? ((navigator.language || 'zh').toLowerCase().startsWith('zh') ? 'zh' : 'en') : v;
@@ -910,7 +831,7 @@ $('voiceOn').addEventListener('change', e => {
 // ---------- 启动 ----------
 window.addEventListener('gamepadconnected', e => { toast('已连接：' + e.gamepad.id); });
 window.addEventListener('gamepaddisconnected', e => { toast('已断开：' + e.gamepad.id); });
-renderSteps(); updatePrompt(); initFsState(); applySkin('xbox'); bindDropZone(); applyLang();
+renderSteps(); updatePrompt(); applySkin('xbox'); applyLang();
 // 开发预览：index.html#step=12 可直接把学习进度定位到某一步（方便截图/调试）
 try {
   const m = /step=(\d+)/.exec(location.hash);

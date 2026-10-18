@@ -35,15 +35,34 @@ WoWPad does the missing last mile:
 1. Connect the pad in **DInput / 2.4G mode** (not the BLE keyboard mode).
 2. Open `index.html` in Chrome or Edge (or the hosted page, if available).
 3. Click **Start**, press the keys as prompted (pause ~1s each).
-4. **Generate**, then **Write to WoW file…** (or drop `gamecontrollerdb.txt` into the dashed box).
+4. **Generate** → **Copy mapping** → open the file below and paste (replace the line for the same GUID if present) → save.
 5. Fully restart WoW → `/console GamePadEnable 1` → bind under **Keybindings → Gamepad**.
+
+## Manual install (recommended)
+
+Copy the mapping, open the file, paste at the end (or replace the existing line for the same GUID), save, then **fully restart WoW**:
+
+**Windows**
+```
+C:\Program Files (x86)\World of Warcraft\_retail_\WTF\gamecontrollerdb.txt
+C:\Program Files (x86)\World of Warcraft\_cn_beta_\WTF\gamecontrollerdb.txt
+C:\Program Files (x86)\World of Warcraft\_classic_\WTF\gamecontrollerdb.txt
+```
+
+**macOS**
+```
+/Applications/World of Warcraft/_retail_/WTF/gamecontrollerdb.txt
+/Applications/World of Warcraft/_cn_beta_/WTF/gamecontrollerdb.txt
+/Applications/World of Warcraft/_classic_/WTF/gamecontrollerdb.txt
+```
+
+In game: `/console GamePadEnable 1`, then bind under **Keybindings → Gamepad**.
 
 ## Features
 
 - Live input + **target key flashing** on an Xbox/PlayStation/Switch skin
 - Short voice prompts (Web Speech, local), language follows the browser (zh/en)
 - Generates SDL mapping; GUID from VID/PID with zero CRC (verified to match on macOS)
-- Writes directly into WoW's `gamecontrollerdb.txt` (File System Access API, with backup) or drag & drop the file/folder
 - Community lookup by VID/PID in [SDL_GameControllerDB](https://github.com/mdqinc/SDL_GameControllerDB)
 - "New species" submission: copy JSON / prefilled GitHub issue
 - AI diagnostics package (copy JSON, paste into any AI)
