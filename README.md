@@ -1,24 +1,21 @@
-# WoWPad — any controller in World of Warcraft on macOS
+# ForeverPad — any controller in World of Warcraft: Forever
 
-**Live:** [GitHub Pages](https://lcx0cd.github.io/wowpad/) · [Cloudflare Pages](https://wowpad-4gb.pages.dev/)
-
-
-**Single-file web tool.** Read a generic DInput controller in Chrome, learn its buttons, generate an SDL mapping, and write it straight into WoW's `WTF/gamecontrollerdb.txt`.
+**Single-file web tool** for the **WoW Forever test** (also works for retail / classic): read any generic DInput controller in Chrome, learn its buttons, generate an SDL mapping, and drop it into WoW's `WTF/gamecontrollerdb.txt`.
 
 No driver, no install, no backend, no database.
 
-![WoWPad card](screenshots/wowpad-card-en.png)
+![ForeverPad card](screenshots/wowpad-card-en.png)
 
 ## Why
 
-On macOS, generic DInput pads (Migu, Beitong, Flydigi, no-name Chinese pads…) show up as plain HID devices. Apple's GameController framework ignores them, so macOS games don't see a gamepad — but **Chrome's Gamepad API does** read them, and **WoW bundles SDL2**, which only needs a mapping line.
+On macOS, generic DInput pads (Migu, Beitong, Flydigi, no-name Chinese pads…) are plain HID devices. Apple's GameController framework ignores them, so macOS games don't see a gamepad — but **Chrome's Gamepad API does**, and **WoW bundles SDL2**, which only needs a mapping line.
 
-WoWPad does the missing last mile:
+ForeverPad does the last mile:
 
 1. read the pad in Chrome (Gamepad API)
-2. guide you to press every button — the target key **flashes on the diagram** (voice prompts too)
-3. generate the SDL mapping string
-4. write it into `_retail_/WTF/gamecontrollerdb.txt` (file picker or drag & drop, automatic backup)
+2. guide you to press every key — the target key **flashes on the diagram** (voice prompts too)
+3. generate the SDL mapping
+4. **Copy mapping** and paste it into the file below, or **Download gamecontrollerdb.txt** and overwrite the existing file
 
 ## Screenshots
 
@@ -26,21 +23,16 @@ WoWPad does the missing last mile:
 |---|---|
 | ![en](screenshots/wowpad-en.png) | ![zh](screenshots/wowpad-zh.png) |
 
-| Card (EN) | Card (ZH) |
-|---|---|
-| ![card en](screenshots/wowpad-card-en.png) | ![card zh](screenshots/wowpad-card-zh.png) |
-
 ## Quick start
 
 1. Connect the pad in **DInput / 2.4G mode** (not the BLE keyboard mode).
-2. Open `index.html` in Chrome or Edge (or the hosted page, if available).
+2. Open `index.html` in Chrome or Edge.
 3. Click **Start**, press the keys as prompted (pause ~1s each).
-4. **Generate** → **Copy mapping** → open the file below and paste (replace the line for the same GUID if present) → save.
-5. Fully restart WoW → `/console GamePadEnable 1` → bind under **Keybindings → Gamepad**.
+4. In **2. Generate mapping**, use **Copy mapping** or **Download gamecontrollerdb.txt**.
+5. Open the file below (create it if missing), paste at the end (replace the line for the same GUID if present), save.
+6. **Fully restart WoW** → `/console GamePadEnable 1` → bind under **Keybindings → Gamepad**.
 
-## Manual install (recommended)
-
-Copy the mapping, open the file, paste at the end (or replace the existing line for the same GUID), save, then **fully restart WoW**:
+## Manual install paths
 
 **Windows**
 ```
@@ -56,17 +48,17 @@ C:\Program Files (x86)\World of Warcraft\_classic_\WTF\gamecontrollerdb.txt
 /Applications/World of Warcraft/_classic_/WTF/gamecontrollerdb.txt
 ```
 
-In game: `/console GamePadEnable 1`, then bind under **Keybindings → Gamepad**.
+The downloaded file is already named `gamecontrollerdb.txt`, so you can overwrite the original directly (browsers may add `(1)` — just rename it back before overwriting).
 
 ## Features
 
-- Live input + **target key flashing** on an Xbox/PlayStation/Switch skin
+- Live input + **target key flashing** on Xbox/PlayStation/Switch skins
 - Short voice prompts (Web Speech, local), language follows the browser (zh/en)
-- Generates SDL mapping; GUID from VID/PID with zero CRC (verified to match on macOS)
+- Generates SDL mapping; GUID from VID/PID with zero CRC (verified on macOS)
 - Community lookup by VID/PID in [SDL_GameControllerDB](https://github.com/mdqinc/SDL_GameControllerDB)
-- "New species" submission: copy JSON / prefilled GitHub issue
+- "New species" submission (copy JSON / prefilled GitHub issue)
 - AI diagnostics package (copy JSON, paste into any AI)
-- Raw input hidden behind a debug section; single HTML file; MIT
+- Single HTML file, MIT
 
 ## How the mapping works
 
@@ -76,17 +68,17 @@ In game: `/console GamePadEnable 1`, then bind under **Keybindings → Gamepad**
 
 - GUID layout: bus `0300` + zero CRC + vendor LE + 0 + product LE + 0 + version + 0
 - SDL on macOS matches even with zeroed CRC (tested with SDL 2.32)
-- For DInput pads, stick axes are canonical `a0..a3`; hats are `h0.1/2/4/8`
+- DInput sticks are canonical `a0..a3`; hats are `h0.1/2/4/8`
 
 ## Tested
 
 - Migu MGV2170 (VID `0x8F61` / PID `0xF831`, 2.4G DInput dongle)
-- macOS 26.5.2 (M4), World of Warcraft 1.60.1 (CN beta)
+- macOS 26.5.2 (M4), World of Warcraft 1.60.1 (CN beta / Forever)
 - ConsolePort 3.3.10 is blocked by the client's addon restrictions for now — native gamepad bindings work
 
 ## Limitations
 
-- BLE keyboard-style mode is invisible to SDL/WoW — use DInput/2.4G/wired
+- BLE keyboard-style mode is invisible to SDL/WoW — use DInput / 2.4G / wired
 - macOS GameController framework still ignores these pads (that's why this tool exists)
 - Mobile browsers vary in Gamepad API support; learning is best on desktop
 

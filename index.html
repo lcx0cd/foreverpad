@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>WoWPad — 魔兽世界手柄配置文件生成器</title>
+<title>ForeverPad — 魔兽世界永恒手柄配置文件生成器</title>
 <!--
   WoWPad — 魔兽手柄映射助手 (MIT License)
   单文件网页工具：用 Chrome/Edge 的 Gamepad API 读取任意 DInput 手柄，
@@ -78,6 +78,11 @@ code { background:#0a0c10; padding:1px 6px; border-radius:5px; font-family: ui-m
 .svgpad .stick { fill:#2a303b; stroke:#3a4150; stroke-width:2; }
 .svgpad .stickdot { fill:#4fd1c5; opacity:.9; }
 .svgpad .body { fill:#141821; stroke:#333a48; stroke-width:2; }
+/* 主操作按钮 */
+button.green { background:#2f9e63; border-color:#2f9e63; color:#04150d; font-weight:700; }
+button.green:hover { filter:brightness(1.1); }
+button.big { font-size:17px; padding:12px 22px; border-radius:10px; }
+
 /* 学习目标按键闪烁 */
 .svgpad .target { stroke: var(--acc) !important; stroke-width: 3.5; animation: pulse 1s ease-in-out infinite; }
 .svgpad .targetlbl { fill: var(--acc) !important; font-weight: 700; }
@@ -110,8 +115,8 @@ code { background:#0a0c10; padding:1px 6px; border-radius:5px; font-family: ui-m
 </head>
 <body>
 <div class="wrap">
-  <h1>WoW<span>Pad</span> — 魔兽世界手柄配置文件生成器</h1>
-  <div class="sub">适用于魔兽世界（正式服 / 永恒 / 经典）· 网页直接读手柄 → 学按键 → 生成 gamecontrollerdb.txt</div>
+  <h1>Forever<span>Pad</span> — 魔兽世界永恒手柄配置文件生成器</h1>
+  <div class="sub">给魔兽世界永恒（测试服）玩家：任意手柄 → 网页学按键 → 生成 gamecontrollerdb.txt。也适用于正式服 / 经典。</div>
 
   <div class="card">
     <h2>1. 输入与学习（先按几下键让浏览器标记连接）</h2>
@@ -176,28 +181,16 @@ code { background:#0a0c10; padding:1px 6px; border-radius:5px; font-family: ui-m
 
   <div class="card">
     <h2>2. 生成映射</h2>
-    <div class="row" style="margin-bottom:10px">
-      <label class="hint">Vendor <input id="vid" size="6" value="" style="width:64px;background:#0a0c10;color:#c8f7ef;border:1px solid var(--line);border-radius:6px;padding:4px 6px"></label>
-      <label class="hint">Product <input id="pid" size="6" value="" style="width:64px;background:#0a0c10;color:#c8f7ef;border:1px solid var(--line);border-radius:6px;padding:4px 6px"></label>
-      <label class="hint"><input type="checkbox" id="hasHat" checked> 十字键是 hat0（大多数 DInput 手柄）</label>
-      <button id="genBtn">生成 / 刷新</button>
-      <button id="swapAB">A/B 对调</button>
-    </div>
-    <div class="row" style="margin-bottom:10px">
-      <button id="lookupBtn">查社区映射库（SDL_GameControllerDB）</button>
-      <span class="hint" id="lookupState">按 VID/PID 匹配已有映射；世界上的手柄是有限的，大部分都有人配过。</span>
-    </div>
-    <div id="communityBox" class="hint" style="display:none;margin-bottom:10px"></div>
     <textarea id="mapping" spellcheck="false" placeholder="完成学习后这里会生成 SDL mapping 行"></textarea>
-    <div class="row" style="margin-top:10px">
-      <button id="copyBtn">复制映射</button>
-      <button id="dlBtn">下载 .txt</button>
-      <button id="diagBtn">复制 AI 诊断包</button>
+    <div class="row" style="margin-top:16px;gap:14px;align-items:center">
+      <button id="copyBtn" class="green big">复制映射</button>
+      <button id="dlBtn" class="green big">下载 gamecontrollerdb.txt</button>
     </div>
-    <div id="newSpecies" class="hint" style="display:none;margin-top:12px;border-left:3px solid var(--acc);padding:8px 12px;background:#0d1a18;border-radius:6px"></div>
-    <div class="hint" style="margin-top:12px;border-left:3px solid var(--acc);padding:8px 12px;background:#0d1a18;border-radius:6px">
+    <div class="hint" style="margin-top:8px">复制 → 粘贴进对应文件；下载 → 文件名已经正确，直接覆盖原文件即可。</div>
+
+    <div class="hint" style="margin-top:15px;border-left:3px solid var(--acc);padding:8px 12px;background:#0d1a18;border-radius:6px">
       <b>手动安装（最稳，不需要自动化）</b><br>
-      <span>1. 点上面的「复制映射」</span><br>
+      <span>1. 点上面的「复制映射」，或用「下载 gamecontrollerdb.txt」覆盖原文件</span><br>
       <span>2. 用文本编辑器打开下面对应的文件（没有就新建）</span><br>
       <span>3. 粘贴到文件末尾；如果已有同一设备（同 GUID）的行，替换那一行</span><br>
       <span>4. 保存，然后完全重启 WoW（不是 /reload）</span><br><br>
@@ -211,6 +204,26 @@ code { background:#0a0c10; padding:1px 6px; border-radius:5px; font-family: ui-m
       <code>/Applications/World of Warcraft/_classic_/WTF/gamecontrollerdb.txt</code><br><br>
       <span>游戏内输入 /console GamePadEnable 1，再到「按键设置 → Gamepad」绑定。</span>
     </div>
+
+    <details style="margin-top:16px">
+      <summary class="hint" style="cursor:pointer">更多工具（重新生成 / A/B 对调 / 社区库 / AI 诊断 / 新物种提交）</summary>
+      <div style="margin-top:12px">
+        <div class="row" style="margin-bottom:10px">
+          <label class="hint">Vendor <input id="vid" size="6" value="" style="width:64px;background:#0a0c10;color:#c8f7ef;border:1px solid var(--line);border-radius:6px;padding:4px 6px"></label>
+          <label class="hint">Product <input id="pid" size="6" value="" style="width:64px;background:#0a0c10;color:#c8f7ef;border:1px solid var(--line);border-radius:6px;padding:4px 6px"></label>
+          <label class="hint"><input type="checkbox" id="hasHat" checked> 十字键是 hat0（大多数 DInput 手柄）</label>
+          <button id="genBtn">生成 / 刷新</button>
+          <button id="swapAB">A/B 对调</button>
+        </div>
+        <div class="row" style="margin-bottom:8px">
+          <button id="lookupBtn">查社区映射库（SDL_GameControllerDB）</button>
+          <span class="hint" id="lookupState">按 VID/PID 匹配已有映射</span>
+        </div>
+        <div id="communityBox" class="hint" style="display:none;margin-bottom:10px"></div>
+        <div class="row" style="margin-bottom:8px"><button id="diagBtn">复制 AI 诊断包</button></div>
+        <div id="newSpecies" class="hint" style="display:none;margin-top:12px;border-left:3px solid var(--acc);padding:8px 12px;background:#0d1a18;border-radius:6px"></div>
+      </div>
+    </details>
   </div>
 
   <div class="card">
@@ -325,9 +338,9 @@ try {
   if (ql === 'en' || ql === 'zh') LANG = ql;
 } catch(e){}
 const EN_MAP = {
- 'WoWPad — 魔兽世界手柄配置文件生成器': 'WoWPad — WoW Controller Config Generator',
- '— 魔兽世界手柄配置文件生成器': '— WoW Controller Config Generator',
- '适用于魔兽世界（正式服 / 永恒 / 经典）· 网页直接读手柄 → 学按键 → 生成 gamecontrollerdb.txt': 'For WoW (retail / Forever / classic) · read controller → learn buttons → generate gamecontrollerdb.txt',
+ 'ForeverPad — 魔兽世界永恒手柄配置文件生成器': 'ForeverPad — WoW Forever Controller Config Generator',
+ '— 魔兽世界永恒手柄配置文件生成器': '— WoW Forever Controller Config Generator',
+ '给魔兽世界永恒（测试服）玩家：任意手柄 → 网页学按键 → 生成 gamecontrollerdb.txt。也适用于正式服 / 经典。': 'For WoW Forever test players: any controller → learn buttons → generate gamecontrollerdb.txt. Also works for retail / classic.',
  '1. 输入与学习（先按几下键让浏览器标记连接）': '1. Input & Learning (press a few buttons to connect)',
  '开始学习': 'Start',
  '重来': 'Reset',
@@ -365,7 +378,7 @@ const EN_MAP = {
  '手柄外观': 'Controller skin',
  '语言默认跟随浏览器；外观仅影响示意图。': 'Language follows the browser; skin only affects the diagram.',
  '手动安装（最稳，不需要自动化）': 'Manual install (safest, no automation)',
- '1. 点上面的「复制映射」': '1. Click “Copy mapping” above',
+ '1. 点上面的「复制映射」，或用「下载 gamecontrollerdb.txt」覆盖原文件': '1. Use “Copy mapping” above, or download gamecontrollerdb.txt and overwrite the file',
  '2. 用文本编辑器打开下面对应的文件（没有就新建）': '2. Open the file below in a text editor (create it if missing)',
  '3. 粘贴到文件末尾；如果已有同一设备（同 GUID）的行，替换那一行': '3. Paste at the end; replace any existing line for the same GUID',
  '4. 保存，然后完全重启 WoW（不是 /reload）': '4. Save, then fully restart WoW (not /reload)',
@@ -387,7 +400,7 @@ function applyLang(){
     n.nodeValue = en && tr ? orig.replace(key, tr) : orig;
   }
   document.documentElement.lang = en ? 'en' : 'zh-CN';
-  document.title = en ? 'WoWPad — WoW Controller Config Generator' : 'WoWPad — 魔兽世界手柄配置文件生成器';
+  document.title = en ? 'ForeverPad — WoW Forever Controller Config Generator' : 'ForeverPad — 魔兽世界永恒手柄配置文件生成器';
   document.querySelectorAll('[placeholder]').forEach(el => {
     if (!el.dataset.phOrig) el.dataset.phOrig = el.placeholder;
     const o = el.dataset.phOrig;
@@ -768,7 +781,7 @@ $('dlBtn').addEventListener('click', ()=>{
   const blob = new Blob([$('mapping').value + '\n'], {type:'text/plain'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = 'gamecontrollerdb.mygamepad.txt';
+  a.download = 'gamecontrollerdb.txt';
   a.click(); URL.revokeObjectURL(a.href);
 });
 $('diagBtn').addEventListener('click', async ()=>{
