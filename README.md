@@ -3,7 +3,7 @@
 **Live:** [GitHub Pages](https://lcx0cd.github.io/foreverpad/) · [Cloudflare Pages](https://foreverpad.pages.dev/)
 
 
-**Single-file web tool** for the **WoW Forever test** (also works for retail / classic): read any generic DInput controller in Chrome, learn its buttons, generate an SDL mapping, and drop it into WoW's `WTF/gamecontrollerdb.txt`.
+**Single-file web tool** for **World of Warcraft: Forever** (also works for retail / classic): read any generic DInput controller in Chrome, learn its buttons, generate an SDL mapping, and drop it into WoW's `WTF/gamecontrollerdb.txt`.
 
 No driver, no install, no backend, no database.
 
@@ -41,6 +41,7 @@ ForeverPad does the last mile:
 
 **Windows**
 ```
+C:\Program Files (x86)\World of Warcraft\_forever_\WTF\gamecontrollerdb.txt
 C:\Program Files (x86)\World of Warcraft\_retail_\WTF\gamecontrollerdb.txt
 C:\Program Files (x86)\World of Warcraft\_cn_beta_\WTF\gamecontrollerdb.txt
 C:\Program Files (x86)\World of Warcraft\_classic_\WTF\gamecontrollerdb.txt
@@ -48,6 +49,7 @@ C:\Program Files (x86)\World of Warcraft\_classic_\WTF\gamecontrollerdb.txt
 
 **macOS**
 ```
+/Applications/World of Warcraft/_forever_/WTF/gamecontrollerdb.txt
 /Applications/World of Warcraft/_retail_/WTF/gamecontrollerdb.txt
 /Applications/World of Warcraft/_cn_beta_/WTF/gamecontrollerdb.txt
 /Applications/World of Warcraft/_classic_/WTF/gamecontrollerdb.txt
@@ -78,7 +80,7 @@ The downloaded file is already named `gamecontrollerdb.txt`, so you can overwrit
 ## Tested
 
 - Migu MGV2170 (VID `0x8F61` / PID `0xF831`, 2.4G DInput dongle)
-- macOS 26.5.2 (M4), World of Warcraft 1.60.1 (CN beta / Forever)
+- macOS 26.5.2 (M4), World of Warcraft: Forever 1.60.1.70790 (flavor `_forever_`)
 - ConsolePort 3.3.10 is blocked by the client's addon restrictions for now — native gamepad bindings work
 
 ## Limitations
